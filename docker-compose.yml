@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  ninja-backend:
+    container_name: ninja_backend
+    tty: true
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    restart: on-failure
+    depends_on:
+      - ninja-db
+    networks:
+      - backend
+  ninja-db:
+    container_name: ninja_db
+    image: postgres:13-alpine
+    volumes:
+      - pg_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_PASSWORD=qwerty123
+    restart: on-failure
+    networks:
+      - backend
+networks:
+  backend:
+    name: backend
+    external: true
+volumes:
+  pg_data:
+
+
