@@ -1,0 +1,314 @@
+basePath: /api/v1/
+definitions:
+  core.Book:
+    properties:
+      author:
+        type: string
+      id:
+        type: string
+      publish_date:
+        type: string
+      rating:
+        type: integer
+      title:
+        type: string
+    type: object
+  core.CreateBookInput:
+    properties:
+      publish_date:
+        type: string
+      rating:
+        maximum: 5
+        minimum: 0
+        type: integer
+      title:
+        maxLength: 64
+        type: string
+    required:
+    - publish_date
+    - rating
+    - title
+    type: object
+  core.UpdateBookInput:
+    properties:
+      publish_date:
+        type: string
+      rating:
+        maximum: 5
+        minimum: 0
+        type: integer
+      title:
+        maxLength: 64
+        type: string
+    required:
+    - publish_date
+    - rating
+    - title
+    type: object
+  v1.response:
+    properties:
+      message:
+        type: string
+    type: object
+  v1.signInInput:
+    properties:
+      password:
+        maxLength: 64
+        minLength: 8
+        type: string
+      username:
+        maxLength: 64
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  v1.tokenResponse:
+    properties:
+      accessToken:
+        type: string
+    type: object
+  v1.userSignUpInput:
+    properties:
+      password:
+        maxLength: 64
+        minLength: 8
+        type: string
+      username:
+        maxLength: 64
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  v1.verifyInput:
+    properties:
+      code:
+        type: string
+      username:
+        type: string
+    type: object
+host: localhost:8000
+info:
+  contact: {}
+  description: REST API for CRUD App
+  title: CRUD API
+  version: "1.0"
+paths:
+  /auth/sign-in:
+    post:
+      consumes:
+      - application/json
+      description: user sign in
+      parameters:
+      - description: sign up info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.signInInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.tokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+      summary: User SignIn
+      tags:
+      - users-auth
+  /auth/sign-up:
+    post:
+      consumes:
+      - application/json
+      description: create user account
+      parameters:
+      - description: sign up info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.userSignUpInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+      summary: User SignUp
+      tags:
+      - users-auth
+  /auth/verify:
+    post:
+      consumes:
+      - application/json
+      description: user verify
+      parameters:
+      - description: verify
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/v1.verifyInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+      summary: User Verify
+      tags:
+      - users-auth
+  /books:
+    get:
+      consumes:
+      - application/json
+      description: Get all book
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/core.Book'
+            type: array
+      summary: Get Books
+      tags:
+      - books
+    post:
+      consumes:
+      - application/json
+      description: create book
+      parameters:
+      - description: create book
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/core.CreateBookInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+      security:
+      - UsersAuth: []
+      summary: Create Book
+      tags:
+      - books
+  /books/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: delete book by id
+      parameters:
+      - description: book id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.response'
+      security:
+      - UsersAuth: []
+      summary: Delete Book
+      tags:
+      - books
+    get:
+      consumes:
+      - application/json
+      description: get book by id
+      parameters:
+      - description: book id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/core.Book'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.response'
+      summary: Get Book
+      tags:
+      - books
+    put:
+      consumes:
+      - application/json
+      description: update book
+      parameters:
+      - description: book id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: update book
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/core.UpdateBookInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.response'
+      security:
+      - UsersAuth: []
+      summary: Update Book
+      tags:
+      - books
+securityDefinitions:
+  UsersAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
