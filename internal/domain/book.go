@@ -1,6 +1,13 @@
 package domain
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+var (
+	ErrBookNotFound = errors.New("book not found")
+)
 
 type Book struct {
 	Id          int       `json:"id" db:"id"`

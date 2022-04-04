@@ -6,7 +6,7 @@ COPY . /github.com/ernur-eskermes/crud-app
 WORKDIR /github.com/ernur-eskermes/crud-app
 
 RUN go mod download
-RUN GOOS=linux go build -o ./.bin/app ./main.go
+RUN GOOS=linux go build -o ./.bin/app ./cmd/main.go
 
 FROM alpine:latest
 
