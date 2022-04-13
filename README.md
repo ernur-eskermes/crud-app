@@ -1,76 +1,27 @@
-# CRUD Приложение для Управления Списком Книг
-## Пример решения тестового задания для практического проекта #1 курса GOLANG NINJA
+# CRUD for Book Management [Backend Application] ![GO][go-badge]
 
-### Стэк
+[go-badge]: https://img.shields.io/github/go-mod/go-version/p12s/furniture-store?style=plastic
+[go-url]: https://github.com/p12s/furniture-store/blob/master/go.mod
+
+## Build & Run (Locally)
+### Prerequisites
 - go 1.17
-- postgres
+- postgres & golang-migrate
+- docker & docker-compose
+- [golangci-lint](https://github.com/golangci/golangci-lint) (<i>optional</i>, used to run code checks)
+- [swag](https://github.com/swaggo/swag) (<i>optional</i>, used to re-generate swagger documentation)
 
-### Запуск
-```docker-compose up --build```
+Create .env file in root directory and add following values:
+```dotenv
+POSTGRES_URI=postgresql://postgres:qwerty123@ninja-db/postgres
 
-## API
+JWT_SIGNING_KEY=JUHDSGYUiAUBUGIFHOJPJF*($#O@J(*FU*#!)(J#
+PASSWORD_SALT=JUHDSGYUiAUBUGIFHOJPJF*($#O@J(*FU*#!)(J#
+SESSION_SECRET=JUHDSGYUiAUBUGIFHOJPJF*($#O@J(*FU*#!)(J#
 
-### POST /books
-Create new book
+HTTP_HOST=localhost
 
-##### Example Input:
-```json
-{
-    "publish_date": "2022-04-05T16:32:20Z",
-    "title": "test2",
-    "author": "author2",
-    "rating": 2
-}
+APP_ENV=local
 ```
 
-### GET /books
-Get all books
-
-##### Example Input:
-```json
-[
-  {
-    "id": 1,
-    "publish_date": "2022-04-04T16:32:20Z",
-    "title": "test2",
-    "author": "author",
-    "rating": 2
-  },
-  {
-    "id": 2,
-    "publish_date": "2022-04-05T16:32:20Z",
-    "title": "test2",
-    "author": "author2",
-    "rating": 2
-  }
-]
-```
-### GET /book?id=1
-Get book by ID
-
-#### Example Output:
-```json
-{
-    "id": 1,
-    "publish_date": "2022-04-04T16:32:20Z",
-    "title": "test2",
-    "author": "author",
-    "rating": 2
-}
-```
-
-### UPDATE /book?id=1
-Update book by ID
-
-#### Example Input:
-```json
-{
-  "publish_date": "2022-04-04T16:32:20Z",
-  "title": "test1",
-  "author": "author1",
-  "rating": 2
-}
-```
-
-### DELETE /book?id=1
-Delete book by ID
+Use `make run` to build&run project, `make lint` to check code with linter, `make migrate` to apply the migration scheme.

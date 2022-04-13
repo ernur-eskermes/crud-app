@@ -1,199 +1,62 @@
 package rest
 
 import (
-	"context"
-	"encoding/json"
-	"errors"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"strconv"
+	"time"
 
-	"github.com/ernur-eskermes/crud-app/internal/domain"
+	"github.com/ernur-eskermes/crud-app/internal/config"
+	"github.com/ernur-eskermes/crud-app/internal/service"
+	v1 "github.com/ernur-eskermes/crud-app/internal/transport/rest/v1"
+	"github.com/ernur-eskermes/crud-app/pkg/auth"
+	"github.com/ernur-eskermes/crud-app/pkg/logging"
+	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/monitor"
 
-	"github.com/gorilla/mux"
+	swagger "github.com/arsmn/fiber-swagger/v2"
 )
 
-type Books interface {
-	Create(ctx context.Context, book domain.Book) error
-	GetByID(ctx context.Context, id int) (domain.Book, error)
-	GetAll(ctx context.Context) ([]domain.Book, error)
-	Delete(ctx context.Context, id int) error
-	Update(ctx context.Context, inp domain.Book) error
-}
-
 type Handler struct {
-	booksService Books
+	services     *service.Services
+	tokenManager auth.TokenManager
+	validate     *validator.Validate
+	logger       *logging.Logger
 }
 
-func NewHandler(books Books) *Handler {
+func NewHandler(services *service.Services, tokenManager auth.TokenManager, validate *validator.Validate, logger *logging.Logger) *Handler {
 	return &Handler{
-		booksService: books,
+		services:     services,
+		validate:     validate,
+		tokenManager: tokenManager,
+		logger:       logger,
 	}
 }
 
-func (h *Handler) InitRouter() *mux.Router {
-	r := mux.NewRouter()
-	r.Use(loggingMiddleware)
+func (h *Handler) InitRouter(app *fiber.App, cfg *config.Config) {
+	app.Use(cors.New())
+	app.Use(logger.New(logger.Config{
+		TimeFormat: time.RFC3339,
+		TimeZone:   "Asia/Almaty",
+	}))
+	app.Use(limiter.New(limiter.Config{
+		Next: func(c *fiber.Ctx) bool {
+			return c.IP() == "127.0.0.1"
+		},
+		Max:        20,
+		Expiration: 30 * time.Second,
+	}))
 
-	books := r.PathPrefix("/books").Subrouter()
+	app.Get("/dashboard", monitor.New())
+	app.Get("/swagger/*", swagger.HandlerDefault)
+	h.initAPI(app)
+}
+
+func (h *Handler) initAPI(app fiber.Router) {
+	handlerV1 := v1.NewHandler(h.services, h.tokenManager, h.validate, h.logger)
+	api := app.Group("/api")
 	{
-		books.HandleFunc("", h.createBook).Methods(http.MethodPost)
-		books.HandleFunc("", h.getAllBooks).Methods(http.MethodGet)
-		books.HandleFunc("/{id:[0-9]+}", h.getBookByID).Methods(http.MethodGet)
-		books.HandleFunc("/{id:[0-9]+}", h.deleteBook).Methods(http.MethodDelete)
-		books.HandleFunc("/{id:[0-9]+}", h.updateBook).Methods(http.MethodPut)
-	}
-
-	return r
-}
-
-func (h *Handler) getBookByID(w http.ResponseWriter, r *http.Request) {
-	id, err := getIdFromRequest(r)
-	if err != nil {
-		newResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	book, err := h.booksService.GetByID(context.TODO(), id)
-	if err != nil {
-		if errors.Is(err, domain.ErrBookNotFound) {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		log.Println("getBookByID() error:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	response, err := json.Marshal(book)
-	if err != nil {
-		log.Println("getBookByID() error:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Add("Content-Type", "application/json")
-	w.Write(response)
-}
-
-func (h *Handler) createBook(w http.ResponseWriter, r *http.Request) {
-	reqBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		newResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	var book domain.Book
-	if err = json.Unmarshal(reqBytes, &book); err != nil {
-		newResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	err = h.booksService.Create(context.TODO(), book)
-	if err != nil {
-		log.Println("createBook() error:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
-}
-
-func (h *Handler) deleteBook(w http.ResponseWriter, r *http.Request) {
-	id, err := getIdFromRequest(r)
-	if err != nil {
-		log.Println("deleteBook() error:", err)
-		newResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	err = h.booksService.Delete(context.TODO(), id)
-	if err != nil {
-		log.Println("deleteBook() error:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
-func (h *Handler) getAllBooks(w http.ResponseWriter, r *http.Request) {
-	books, err := h.booksService.GetAll(context.TODO())
-	if err != nil {
-		log.Println("getAllBooks() error:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	response, err := json.Marshal(books)
-	if err != nil {
-		log.Println("getAllBooks() error:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Add("Content-Type", "application/json")
-	w.Write(response)
-}
-
-func (h *Handler) updateBook(w http.ResponseWriter, r *http.Request) {
-	id, err := getIdFromRequest(r)
-	if err != nil {
-		newResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	reqBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		newResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	var inp domain.Book
-	if err = json.Unmarshal(reqBytes, &inp); err != nil {
-		newResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	inp.Id = id
-	err = h.booksService.Update(context.TODO(), inp)
-	if err != nil {
-		log.Println("error:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
-func getIdFromRequest(r *http.Request) (int, error) {
-	vars := mux.Vars(r)
-	id, err := strconv.ParseInt(vars["id"], 10, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	if id == 0 {
-		return 0, errors.New("id can't be 0")
-	}
-
-	return int(id), nil
-}
-
-type response struct {
-	Message string `json:"message"`
-}
-
-func newResponse(w http.ResponseWriter, statusCode int, message string) {
-	w.WriteHeader(statusCode)
-	if message != "" {
-		res, err := json.Marshal(response{message})
-		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err.Error())
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(res)
+		handlerV1.Init(api)
 	}
 }
