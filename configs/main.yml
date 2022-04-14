@@ -1,0 +1,13 @@
+http:
+  port: 8000
+  maxHeaderBytes: 1
+  readTimeout: 10s
+  writeTimeout: 10s
+
+auth:
+  accessTokenTTL: 2h
+
+limiter:
+  rps: 10
+  burst: 20
+  ttl: 10m
