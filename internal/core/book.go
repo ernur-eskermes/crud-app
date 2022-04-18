@@ -23,8 +23,16 @@ type CreateBookInput struct {
 	Rating      int       `json:"rating" validate:"required,number,max=5,min=0"`
 }
 
+func (c *CreateBookInput) Validate() []*ErrorResponse {
+	return validateStruct(c)
+}
+
 type UpdateBookInput struct {
 	Title       string    `json:"title" validate:"required,max=64"`
 	PublishDate time.Time `json:"publish_date" validate:"required"`
 	Rating      int       `json:"rating" validate:"required,number,max=5,min=0"`
+}
+
+func (c *UpdateBookInput) Validate() []*ErrorResponse {
+	return validateStruct(c)
 }

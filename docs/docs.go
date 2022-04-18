@@ -36,7 +36,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.signInInput"
+                            "$ref": "#/definitions/core.AuthInput"
                         }
                     }
                 ],
@@ -44,13 +44,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.tokenResponse"
+                            "$ref": "#/definitions/core.Tokens"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/rest.response"
                         }
                     }
                 }
@@ -76,7 +76,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.userSignUpInput"
+                            "$ref": "#/definitions/core.AuthInput"
                         }
                     }
                 ],
@@ -90,7 +90,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/rest.response"
                         }
                     }
                 }
@@ -116,7 +116,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.verifyInput"
+                            "$ref": "#/definitions/core.VerifyInput"
                         }
                     }
                 ],
@@ -127,7 +127,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/rest.response"
                         }
                     }
                 }
@@ -196,7 +196,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/core.ErrorResponse"
                         }
                     }
                 }
@@ -234,7 +234,7 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/rest.response"
                         }
                     }
                 }
@@ -284,13 +284,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/core.ErrorResponse"
                         }
                     }
                 }
@@ -331,13 +325,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/rest.response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/rest.response"
                         }
                     }
                 }
@@ -345,6 +339,24 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "core.AuthInput": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 8
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 64
+                }
+            }
+        },
         "core.Book": {
             "type": "object",
             "properties": {
@@ -387,6 +399,28 @@ const docTemplate = `{
                 }
             }
         },
+        "core.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "failed_field": {
+                    "type": "string"
+                },
+                "tag": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "core.Tokens": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                }
+            }
+        },
         "core.UpdateBookInput": {
             "type": "object",
             "required": [
@@ -409,65 +443,25 @@ const docTemplate = `{
                 }
             }
         },
-        "v1.response": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "v1.signInInput": {
+        "core.VerifyInput": {
             "type": "object",
             "required": [
-                "password",
+                "code",
                 "username"
             ],
-            "properties": {
-                "password": {
-                    "type": "string",
-                    "maxLength": 64,
-                    "minLength": 8
-                },
-                "username": {
-                    "type": "string",
-                    "maxLength": 64
-                }
-            }
-        },
-        "v1.tokenResponse": {
-            "type": "object",
-            "properties": {
-                "accessToken": {
-                    "type": "string"
-                }
-            }
-        },
-        "v1.userSignUpInput": {
-            "type": "object",
-            "required": [
-                "password",
-                "username"
-            ],
-            "properties": {
-                "password": {
-                    "type": "string",
-                    "maxLength": 64,
-                    "minLength": 8
-                },
-                "username": {
-                    "type": "string",
-                    "maxLength": 64
-                }
-            }
-        },
-        "v1.verifyInput": {
-            "type": "object",
             "properties": {
                 "code": {
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "rest.response": {
+            "type": "object",
+            "properties": {
+                "message": {
                     "type": "string"
                 }
             }
@@ -486,7 +480,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:8000",
-	BasePath:         "/api/v1/",
+	BasePath:         "/api/",
 	Schemes:          []string{},
 	Title:            "CRUD API",
 	Description:      "REST API for CRUD App",

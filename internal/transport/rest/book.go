@@ -1,4 +1,4 @@
-package v1
+package rest
 
 import (
 	"context"
@@ -9,24 +9,6 @@ import (
 	"github.com/ernur-eskermes/crud-app/internal/core"
 	"github.com/gofiber/fiber/v2"
 )
-
-/*
-type BookService interface {
-	Create(ctx context.Context, book core.CreateBookInput, userID uuid.UUID) error
-	GetByID(ctx context.Context, id uuid.UUID) (core.Book, error)
-	GetAll(ctx context.Context) ([]core.Book, error)
-	Delete(ctx context.Context, id, userID uuid.UUID) error
-	Update(ctx context.Context, id, userID uuid.UUID, inp core.UpdateBookInput) error
-}
-
-type BookHandler struct {
-	service BookService
-}
-
-func NewBookHandler(service BookService) *BookHandler {
-	return &BookHandler{service: service}
-}
-*/
 
 func (h *Handler) initBooksRoutes(api fiber.Router) {
 	books := api.Group("/books")
@@ -59,10 +41,10 @@ func (h *Handler) getBookByID(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(response{"id value of incorrect type"})
 	}
 
-	book, err := h.services.Books.GetByID(context.TODO(), id)
+	book, err := h.booksService.GetByID(context.TODO(), id)
 	if err != nil {
 		if errors.Is(err, core.ErrBookNotFound) {
-			return c.SendStatus(fiber.StatusNotFound)
+			return c.Status(fiber.StatusBadRequest).JSON(response{err.Error()})
 		}
 
 		h.logger.Error(err)
@@ -82,7 +64,7 @@ func (h *Handler) getBookByID(c *fiber.Ctx) error {
 // @Produce  json
 // @Param input body core.CreateBookInput true "create book"
 // @Success 201 {string} string "Created"
-// @Failure 400 {object} response
+// @Failure 400 {object} core.ErrorResponse
 // @Router /books [post]
 func (h *Handler) createBook(c *fiber.Ctx) error {
 	userID, err := getUserID(c)
@@ -92,26 +74,16 @@ func (h *Handler) createBook(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
-	if _, err = h.services.Users.GetByID(context.TODO(), userID); err != nil {
-		if errors.Is(err, core.ErrUserNotFound) {
-			return c.Status(fiber.StatusBadRequest).JSON(response{"user not found"})
-		}
-
-		return c.SendStatus(fiber.StatusInternalServerError)
-	}
-
 	var inp core.CreateBookInput
-
 	if err = c.BodyParser(&inp); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(response{err.Error()})
 	}
 
-	if validationError := h.validateStruct(inp); validationError != nil {
+	if validationError := inp.Validate(); validationError != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(validationError)
 	}
 
-	err = h.services.Books.Create(context.TODO(), inp, userID)
-	if err != nil {
+	if err = h.booksService.Create(context.TODO(), inp, userID); err != nil {
 		h.logger.Error(err)
 
 		return c.SendStatus(fiber.StatusInternalServerError)
@@ -144,17 +116,9 @@ func (h *Handler) deleteBook(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(response{"id value of incorrect type"})
 	}
 
-	if _, err = h.services.Users.GetByID(context.TODO(), userID); err != nil {
-		if errors.Is(err, core.ErrUserNotFound) {
-			return c.Status(fiber.StatusBadRequest).JSON(response{"user not found"})
-		}
-
-		return c.SendStatus(fiber.StatusInternalServerError)
-	}
-
-	if err = h.services.Books.Delete(context.TODO(), id, userID); err != nil {
+	if err = h.booksService.Delete(context.TODO(), id, userID); err != nil {
 		if errors.Is(err, core.ErrBookNotFound) {
-			return c.SendStatus(fiber.StatusForbidden)
+			return c.Status(fiber.StatusBadRequest).JSON(response{err.Error()})
 		}
 
 		h.logger.Error(err)
@@ -174,7 +138,7 @@ func (h *Handler) deleteBook(c *fiber.Ctx) error {
 // @Success 200 {object} []core.Book
 // @Router /books [get]
 func (h *Handler) getAllBooks(c *fiber.Ctx) error {
-	books, err := h.services.Books.GetAll(context.TODO())
+	books, err := h.booksService.GetAll(context.TODO())
 	if err != nil {
 		h.logger.Error(err)
 
@@ -194,7 +158,7 @@ func (h *Handler) getAllBooks(c *fiber.Ctx) error {
 // @Param id path string true "book id"
 // @Param input body core.UpdateBookInput true "update book"
 // @Success 200 {string} string "OK"
-// @Failure 400 {object} response
+// @Failure 400 {object} core.ErrorResponse
 // @Router /books/{id} [put]
 func (h *Handler) updateBook(c *fiber.Ctx) error {
 	userID, err := getUserID(c)
@@ -209,26 +173,18 @@ func (h *Handler) updateBook(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(response{"id value of incorrect type"})
 	}
 
-	if _, err = h.services.Users.GetByID(context.TODO(), userID); err != nil {
-		if errors.Is(err, core.ErrUserNotFound) {
-			return c.Status(fiber.StatusBadRequest).JSON(response{"user not found"})
-		}
-
-		return c.SendStatus(fiber.StatusInternalServerError)
-	}
-
 	var inp core.UpdateBookInput
 	if err = c.BodyParser(&inp); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(response{err.Error()})
 	}
 
-	if validationError := h.validateStruct(inp); validationError != nil {
+	if validationError := inp.Validate(); validationError != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(validationError)
 	}
 
-	if err = h.services.Books.Update(context.TODO(), id, userID, inp); err != nil {
+	if err = h.booksService.Update(context.TODO(), id, userID, inp); err != nil {
 		if errors.Is(err, core.ErrBookNotFound) {
-			return c.SendStatus(fiber.StatusForbidden)
+			return c.Status(fiber.StatusBadRequest).JSON(response{err.Error()})
 		}
 
 		h.logger.Error(err)

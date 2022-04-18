@@ -1,14 +1,15 @@
 package rest
 
 import (
+	"context"
 	"time"
 
+	"github.com/ernur-eskermes/crud-app/internal/core"
+	"github.com/google/uuid"
+
 	"github.com/ernur-eskermes/crud-app/internal/config"
-	"github.com/ernur-eskermes/crud-app/internal/service"
-	v1 "github.com/ernur-eskermes/crud-app/internal/transport/rest/v1"
 	"github.com/ernur-eskermes/crud-app/pkg/auth"
 	"github.com/ernur-eskermes/crud-app/pkg/logging"
-	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
@@ -18,17 +19,32 @@ import (
 	swagger "github.com/arsmn/fiber-swagger/v2"
 )
 
+type UsersService interface {
+	SignUp(ctx context.Context, input core.AuthInput) error
+	Verify(ctx context.Context, username, code string) error
+	SignIn(ctx context.Context, input core.AuthInput) (core.Tokens, error)
+	GetByID(ctx context.Context, id uuid.UUID) (core.User, error)
+}
+
+type BooksService interface {
+	Create(ctx context.Context, book core.CreateBookInput, userID uuid.UUID) error
+	GetByID(ctx context.Context, id uuid.UUID) (core.Book, error)
+	GetAll(ctx context.Context) ([]core.Book, error)
+	Delete(ctx context.Context, id, userID uuid.UUID) error
+	Update(ctx context.Context, id, userID uuid.UUID, inp core.UpdateBookInput) error
+}
+
 type Handler struct {
-	services     *service.Services
+	usersService UsersService
+	booksService BooksService
 	tokenManager auth.TokenManager
-	validate     *validator.Validate
 	logger       *logging.Logger
 }
 
-func NewHandler(services *service.Services, tokenManager auth.TokenManager, validate *validator.Validate, logger *logging.Logger) *Handler {
+func NewHandler(usersService UsersService, booksService BooksService, tokenManager auth.TokenManager, logger *logging.Logger) *Handler {
 	return &Handler{
-		services:     services,
-		validate:     validate,
+		usersService: usersService,
+		booksService: booksService,
 		tokenManager: tokenManager,
 		logger:       logger,
 	}
@@ -54,9 +70,13 @@ func (h *Handler) InitRouter(app *fiber.App, cfg *config.Config) {
 }
 
 func (h *Handler) initAPI(app fiber.Router) {
-	handlerV1 := v1.NewHandler(h.services, h.tokenManager, h.validate, h.logger)
 	api := app.Group("/api")
 	{
-		handlerV1.Init(api)
+		h.initAuthRoutes(api)
+		h.initBooksRoutes(api)
 	}
+}
+
+type response struct {
+	Message string `json:"message"`
 }

@@ -36,8 +36,7 @@ type UsersService struct {
 }
 
 func NewUsersService(repo UsersRepository, hasher hash.PasswordHasher, tokenManager auth.TokenManager,
-	accessTTL time.Duration, domain string, cache cache.Cache, otpGenerator otp.Generator,
-) *UsersService {
+	accessTTL time.Duration, domain string, cache cache.Cache, otpGenerator otp.Generator) *UsersService {
 	return &UsersService{
 		repo:           repo,
 		hasher:         hasher,
@@ -49,7 +48,7 @@ func NewUsersService(repo UsersRepository, hasher hash.PasswordHasher, tokenMana
 	}
 }
 
-func (s *UsersService) SignUp(ctx context.Context, input UserSignUpInput) error {
+func (s *UsersService) SignUp(ctx context.Context, input core.AuthInput) error {
 	passwordHash, err := s.hasher.Hash(input.Password)
 	if err != nil {
 		return err
@@ -68,12 +67,12 @@ func (s *UsersService) SignUp(ctx context.Context, input UserSignUpInput) error 
 func (s *UsersService) Verify(ctx context.Context, username, code string) error {
 	c, err := s.cache.Get(username)
 	if err != nil {
-		return core.ErrUserCodeExpired
+		return core.ErrUserCodeIncorrect
 	}
 
 	v, ok := c.(string)
 	if !ok {
-		return core.ErrUserCodeUnknownType
+		return core.ErrUserCodeIncorrect
 	}
 
 	if v != code {
@@ -85,19 +84,19 @@ func (s *UsersService) Verify(ctx context.Context, username, code string) error 
 	return s.repo.Verify(ctx, username)
 }
 
-func (s *UsersService) SignIn(ctx context.Context, input UserSignInInput) (Tokens, error) {
+func (s *UsersService) SignIn(ctx context.Context, input core.AuthInput) (core.Tokens, error) {
 	passwordHash, err := s.hasher.Hash(input.Password)
 	if err != nil {
-		return Tokens{}, err
+		return core.Tokens{}, err
 	}
 
 	user, err := s.repo.GetByCredentials(ctx, input.Username, passwordHash)
 	if err != nil {
 		if errors.Is(err, core.ErrUserNotFound) {
-			return Tokens{}, err
+			return core.Tokens{}, err
 		}
 
-		return Tokens{}, err
+		return core.Tokens{}, err
 	}
 
 	return s.createSession(user.ID.String())
@@ -107,9 +106,9 @@ func (s *UsersService) GetByID(ctx context.Context, id uuid.UUID) (core.User, er
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *UsersService) createSession(userID string) (Tokens, error) {
+func (s *UsersService) createSession(userID string) (core.Tokens, error) {
 	var (
-		res Tokens
+		res core.Tokens
 		err error
 	)
 

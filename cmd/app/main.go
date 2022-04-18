@@ -6,11 +6,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/ernur-eskermes/crud-app/internal/storage/psql"
+
 	"github.com/ernur-eskermes/crud-app/pkg/otp"
 
 	_ "github.com/ernur-eskermes/crud-app/docs"
 	"github.com/ernur-eskermes/crud-app/internal/config"
-	"github.com/ernur-eskermes/crud-app/internal/repository"
 	"github.com/ernur-eskermes/crud-app/internal/service"
 	"github.com/ernur-eskermes/crud-app/internal/transport/rest"
 	"github.com/ernur-eskermes/crud-app/pkg/auth"
@@ -18,7 +19,6 @@ import (
 	"github.com/ernur-eskermes/crud-app/pkg/hash"
 	"github.com/ernur-eskermes/crud-app/pkg/logging"
 	cache "github.com/ernur-eskermes/go-homeworks/2-cache-ttl"
-	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v4/log/logrusadapter"
 	_ "github.com/lib/pq"
@@ -31,7 +31,7 @@ const configsDir = "configs"
 // @description REST API for CRUD App
 
 // @host localhost:8000
-// @BasePath /api/v1/
+// @BasePath /api/
 
 // @securityDefinitions.apikey UsersAuth
 // @in header
@@ -58,8 +58,6 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	validation := validator.New()
-
 	// init db
 	db, err := postgresql.NewClient(context.TODO(), 5, postgresql.StorageConfig{
 		ConnStr: cfg.Postgres.ConnStr,
@@ -71,18 +69,13 @@ func main() {
 
 	// init deps
 
-	repos := repository.NewRepositories(db)
-	services := service.NewServices(service.Deps{
-		Repos:          repos,
-		Hasher:         hasher,
-		Cache:          memCache,
-		OtpGenerator:   otpGenerator,
-		TokenManager:   tokenManager,
-		AccessTokenTTL: cfg.Auth.JWT.AccessTokenTTL,
-		Environment:    cfg.Environment,
-		Domain:         cfg.HTTP.Host,
-	})
-	handlers := rest.NewHandler(services, tokenManager, validation, logger)
+	usersRepo := psql.NewUsersRepo(db)
+	usersService := service.NewUsersService(usersRepo, hasher, tokenManager, cfg.Auth.JWT.AccessTokenTTL, cfg.HTTP.Host, memCache, otpGenerator)
+
+	booksRepo := psql.NewBooksRepo(db)
+	booksService := service.NewBooksService(booksRepo, tokenManager)
+
+	handlers := rest.NewHandler(usersService, booksService, tokenManager, logger)
 
 	// init & run server
 
@@ -95,7 +88,7 @@ func main() {
 	handlers.InitRouter(app, cfg)
 
 	go func() {
-		if err := app.Listen(":" + cfg.HTTP.Port); err != nil {
+		if err = app.Listen(":" + cfg.HTTP.Port); err != nil {
 			logger.Errorf("error occurred while running http server: %s\n", err.Error())
 		}
 	}()
@@ -110,7 +103,7 @@ func main() {
 
 	logger.Info("Shutting down server")
 
-	if err := app.Shutdown(); err != nil {
+	if err = app.Shutdown(); err != nil {
 		logger.Errorf("failed to stop server: %v", err)
 	}
 

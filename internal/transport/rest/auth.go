@@ -1,4 +1,4 @@
-package v1
+package rest
 
 import (
 	"errors"
@@ -6,7 +6,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/ernur-eskermes/crud-app/internal/core"
-	"github.com/ernur-eskermes/crud-app/internal/service"
 )
 
 func (h *Handler) initAuthRoutes(api fiber.Router) {
@@ -18,44 +17,27 @@ func (h *Handler) initAuthRoutes(api fiber.Router) {
 	}
 }
 
-type userSignUpInput struct {
-	Username string `json:"username" validate:"required,max=64"`
-	Password string `json:"password" validate:"required,min=8,max=64"`
-}
-
-type signInInput struct {
-	Username string `json:"username" validate:"required,max=64"`
-	Password string `json:"password" validate:"required,min=8,max=64"`
-}
-
-type tokenResponse struct {
-	AccessToken string `json:"accessToken"`
-}
-
 // @Summary User SignUp
 // @Tags users-auth
 // @Description create user account
 // @ModuleID userSignUp
 // @Accept  json
 // @Produce  json
-// @Param input body userSignUpInput true "sign up info"
+// @Param input body core.AuthInput true "sign up info"
 // @Success 201 {string} string "Created"
 // @Failure 400 {object} response
 // @Router /auth/sign-up [post]
 func (h *Handler) userSignUp(c *fiber.Ctx) error {
-	var inp userSignUpInput
+	var inp core.AuthInput
 	if err := c.BodyParser(&inp); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(response{err.Error()})
 	}
 
-	if validationError := h.validateStruct(inp); validationError != nil {
+	if validationError := inp.Validate(); validationError != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(validationError)
 	}
 
-	if err := h.services.Users.SignUp(c.Context(), service.UserSignUpInput{
-		Username: inp.Username,
-		Password: inp.Password,
-	}); err != nil {
+	if err := h.usersService.SignUp(c.Context(), inp); err != nil {
 		if errors.Is(err, core.ErrUserAlreadyExists) {
 			return c.Status(fiber.StatusBadRequest).JSON(response{err.Error()})
 		}
@@ -74,25 +56,22 @@ func (h *Handler) userSignUp(c *fiber.Ctx) error {
 // @ModuleID userSignIn
 // @Accept  json
 // @Produce  json
-// @Param input body signInInput true "sign up info"
-// @Success 200 {object} tokenResponse
+// @Param input body core.AuthInput true "sign up info"
+// @Success 200 {object} core.Tokens
 // @Failure 400 {object} response
 // @Router /auth/sign-in [post]
 func (h *Handler) userSignIn(c *fiber.Ctx) error {
-	var inp signInInput
+	var inp core.AuthInput
 
 	if err := c.BodyParser(&inp); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(response{err.Error()})
 	}
 
-	if validationError := h.validateStruct(inp); validationError != nil {
+	if validationError := inp.Validate(); validationError != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(validationError)
 	}
 
-	res, err := h.services.Users.SignIn(c.Context(), service.UserSignInInput{
-		Username: inp.Username,
-		Password: inp.Password,
-	})
+	res, err := h.usersService.SignIn(c.Context(), inp)
 	if err != nil {
 		if errors.Is(err, core.ErrUserNotFound) {
 			return c.Status(fiber.StatusBadRequest).JSON(response{err.Error()})
@@ -103,14 +82,7 @@ func (h *Handler) userSignIn(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	return c.JSON(tokenResponse{
-		AccessToken: res.AccessToken,
-	})
-}
-
-type verifyInput struct {
-	Username string `json:"username"`
-	Code     string `json:"code"`
+	return c.JSON(res)
 }
 
 // @Summary User Verify
@@ -119,26 +91,23 @@ type verifyInput struct {
 // @ModuleID verify
 // @Accept  json
 // @Produce  json
-// @Param input body verifyInput true "verify"
+// @Param input body core.VerifyInput true "verify"
 // @Success 200
 // @Failure 400 {object} response
 // @Router /auth/verify [post]
 func (h *Handler) verify(c *fiber.Ctx) error {
-	var inp verifyInput
+	var inp core.VerifyInput
 
 	if err := c.BodyParser(&inp); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(response{err.Error()})
 	}
 
-	if validationError := h.validateStruct(inp); validationError != nil {
+	if validationError := inp.Validate(); validationError != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(validationError)
 	}
 
-	if err := h.services.Users.Verify(c.Context(), inp.Username, inp.Code); err != nil {
-		if errors.Is(err, core.ErrUserNotFound) ||
-			errors.Is(err, core.ErrUserCodeExpired) ||
-			errors.Is(err, core.ErrUserCodeUnknownType) ||
-			errors.Is(err, core.ErrUserCodeIncorrect) {
+	if err := h.usersService.Verify(c.Context(), inp.Username, inp.Code); err != nil {
+		if errors.Is(err, core.ErrUserNotFound) || errors.Is(err, core.ErrUserCodeIncorrect) {
 			return c.Status(fiber.StatusBadRequest).JSON(response{err.Error()})
 		}
 

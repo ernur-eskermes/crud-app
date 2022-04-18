@@ -7,7 +7,7 @@
         "version": "1.0"
     },
     "host": "localhost:8000",
-    "basePath": "/api/v1/",
+    "basePath": "/api/",
     "paths": {
         "/auth/sign-in": {
             "post": {
@@ -29,7 +29,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.signInInput"
+                            "$ref": "#/definitions/core.AuthInput"
                         }
                     }
                 ],
@@ -37,13 +37,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.tokenResponse"
+                            "$ref": "#/definitions/core.Tokens"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/rest.response"
                         }
                     }
                 }
@@ -69,7 +69,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.userSignUpInput"
+                            "$ref": "#/definitions/core.AuthInput"
                         }
                     }
                 ],
@@ -83,7 +83,7 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/rest.response"
                         }
                     }
                 }
@@ -109,7 +109,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.verifyInput"
+                            "$ref": "#/definitions/core.VerifyInput"
                         }
                     }
                 ],
@@ -120,7 +120,7 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/rest.response"
                         }
                     }
                 }
@@ -189,7 +189,7 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/core.ErrorResponse"
                         }
                     }
                 }
@@ -227,7 +227,7 @@
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/rest.response"
                         }
                     }
                 }
@@ -277,13 +277,7 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/core.ErrorResponse"
                         }
                     }
                 }
@@ -324,13 +318,13 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/rest.response"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/v1.response"
+                            "$ref": "#/definitions/rest.response"
                         }
                     }
                 }
@@ -338,6 +332,24 @@
         }
     },
     "definitions": {
+        "core.AuthInput": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 8
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 64
+                }
+            }
+        },
         "core.Book": {
             "type": "object",
             "properties": {
@@ -380,6 +392,28 @@
                 }
             }
         },
+        "core.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "failed_field": {
+                    "type": "string"
+                },
+                "tag": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "core.Tokens": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                }
+            }
+        },
         "core.UpdateBookInput": {
             "type": "object",
             "required": [
@@ -402,65 +436,25 @@
                 }
             }
         },
-        "v1.response": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "v1.signInInput": {
+        "core.VerifyInput": {
             "type": "object",
             "required": [
-                "password",
+                "code",
                 "username"
             ],
-            "properties": {
-                "password": {
-                    "type": "string",
-                    "maxLength": 64,
-                    "minLength": 8
-                },
-                "username": {
-                    "type": "string",
-                    "maxLength": 64
-                }
-            }
-        },
-        "v1.tokenResponse": {
-            "type": "object",
-            "properties": {
-                "accessToken": {
-                    "type": "string"
-                }
-            }
-        },
-        "v1.userSignUpInput": {
-            "type": "object",
-            "required": [
-                "password",
-                "username"
-            ],
-            "properties": {
-                "password": {
-                    "type": "string",
-                    "maxLength": 64,
-                    "minLength": 8
-                },
-                "username": {
-                    "type": "string",
-                    "maxLength": 64
-                }
-            }
-        },
-        "v1.verifyInput": {
-            "type": "object",
             "properties": {
                 "code": {
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "rest.response": {
+            "type": "object",
+            "properties": {
+                "message": {
                     "type": "string"
                 }
             }
