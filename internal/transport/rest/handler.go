@@ -23,6 +23,7 @@ type UsersService interface {
 	SignUp(ctx context.Context, input core.AuthInput) error
 	Verify(ctx context.Context, username, code string) error
 	SignIn(ctx context.Context, input core.AuthInput) (core.Tokens, error)
+	RefreshTokens(ctx context.Context, refreshToken string) (core.Tokens, error)
 	GetByID(ctx context.Context, id uuid.UUID) (core.User, error)
 }
 

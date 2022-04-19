@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -59,10 +58,11 @@ func (m *Manager) Parse(accessToken string) (string, error) {
 }
 
 func (m *Manager) NewRefreshToken() (string, error) {
-	n, err := rand.Int(rand.Reader, big.NewInt(32))
-	if err != nil {
+	b := make([]byte, 32)
+
+	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
 
-	return n.String(), nil
+	return fmt.Sprintf("%x", b), nil
 }

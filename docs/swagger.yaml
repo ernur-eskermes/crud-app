@@ -94,6 +94,25 @@ info:
   title: CRUD API
   version: "1.0"
 paths:
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: refresh token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/core.Tokens'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rest.response'
+      summary: Refresh Token
+      tags:
+      - users-auth
   /auth/sign-in:
     post:
       consumes:

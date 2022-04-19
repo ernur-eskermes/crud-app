@@ -6,6 +6,7 @@ http:
 
 auth:
   accessTokenTTL: 2h
+  refreshTokenTTL: 24h
 
 limiter:
   rps: 10
