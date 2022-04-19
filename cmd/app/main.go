@@ -70,7 +70,8 @@ func main() {
 	// init deps
 
 	usersRepo := psql.NewUsersRepo(db)
-	usersService := service.NewUsersService(usersRepo, hasher, tokenManager, cfg.Auth.JWT.AccessTokenTTL, cfg.HTTP.Host, memCache, otpGenerator)
+	sessionsRepo := psql.NewSessionsRepo(db)
+	usersService := service.NewUsersService(usersRepo, sessionsRepo, hasher, tokenManager, cfg.Auth.JWT.AccessTokenTTL, cfg.Auth.JWT.RefreshTokenTTL, cfg.HTTP.Host, memCache, otpGenerator)
 
 	booksRepo := psql.NewBooksRepo(db)
 	booksService := service.NewBooksService(booksRepo, tokenManager)

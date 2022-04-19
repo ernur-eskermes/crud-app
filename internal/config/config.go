@@ -12,6 +12,7 @@ const (
 	defaultHTTPRWTimeout          = 10 * time.Second
 	defaultHTTPMaxHeaderMegabytes = 1
 	defaultAccessTokenTTL         = 15 * time.Minute
+	defaultRefreshTokenTTL        = 24 * time.Hour
 	defaultLimiterRPS             = 10
 	defaultLimiterBurst           = 2
 	defaultLimiterTTL             = 10 * time.Minute
@@ -40,8 +41,9 @@ type (
 	}
 
 	JWTConfig struct {
-		AccessTokenTTL time.Duration `mapstructure:"accessTokenTTL"`
-		SigningKey     string
+		AccessTokenTTL  time.Duration `mapstructure:"accessTokenTTL"`
+		RefreshTokenTTL time.Duration `mapstructure:"refreshTokenTTL"`
+		SigningKey      string
 	}
 
 	HTTPConfig struct {
@@ -125,6 +127,7 @@ func populateDefaults() {
 	viper.SetDefault("http.timeouts.read", defaultHTTPRWTimeout)
 	viper.SetDefault("http.timeouts.write", defaultHTTPRWTimeout)
 	viper.SetDefault("auth.accessTokenTTL", defaultAccessTokenTTL)
+	viper.SetDefault("auth.refreshTokenTTL", defaultRefreshTokenTTL)
 	viper.SetDefault("limiter.rps", defaultLimiterRPS)
 	viper.SetDefault("limiter.burst", defaultLimiterBurst)
 	viper.SetDefault("limiter.ttl", defaultLimiterTTL)

@@ -23,28 +23,38 @@ type UsersRepository interface {
 	Verify(ctx context.Context, username string) error
 }
 
+type SessionsRepository interface {
+	GetByToken(ctx context.Context, token string) (core.RefreshSession, error)
+	Create(ctx context.Context, session core.RefreshSession) error
+	Delete(ctx context.Context, userID uuid.UUID) error
+}
+
 type UsersService struct {
 	repo         UsersRepository
+	sessionsRepo SessionsRepository
 	hasher       hash.PasswordHasher
 	tokenManager auth.TokenManager
 	cache        cache.Cache
 	otpGenerator otp.Generator
 
-	accessTokenTTL time.Duration
+	accessTokenTTL  time.Duration
+	refreshTokenTTL time.Duration
 
 	domain string
 }
 
-func NewUsersService(repo UsersRepository, hasher hash.PasswordHasher, tokenManager auth.TokenManager,
-	accessTTL time.Duration, domain string, cache cache.Cache, otpGenerator otp.Generator) *UsersService {
+func NewUsersService(repo UsersRepository, sessionsRepo SessionsRepository, hasher hash.PasswordHasher, tokenManager auth.TokenManager,
+	accessTTL, refreshTTL time.Duration, domain string, cache cache.Cache, otpGenerator otp.Generator) *UsersService {
 	return &UsersService{
-		repo:           repo,
-		hasher:         hasher,
-		tokenManager:   tokenManager,
-		accessTokenTTL: accessTTL,
-		domain:         domain,
-		cache:          cache,
-		otpGenerator:   otpGenerator,
+		repo:            repo,
+		sessionsRepo:    sessionsRepo,
+		hasher:          hasher,
+		tokenManager:    tokenManager,
+		accessTokenTTL:  accessTTL,
+		refreshTokenTTL: refreshTTL,
+		domain:          domain,
+		cache:           cache,
+		otpGenerator:    otpGenerator,
 	}
 }
 
@@ -99,22 +109,56 @@ func (s *UsersService) SignIn(ctx context.Context, input core.AuthInput) (core.T
 		return core.Tokens{}, err
 	}
 
-	return s.createSession(user.ID.String())
+	return s.createSession(ctx, user.ID)
+}
+
+func (s *UsersService) RefreshTokens(ctx context.Context, refreshToken string) (core.Tokens, error) {
+	session, err := s.sessionsRepo.GetByToken(ctx, refreshToken)
+	if err != nil {
+		if errors.Is(err, core.ErrTokenNotFound) {
+			return core.Tokens{}, err
+		}
+
+		return core.Tokens{}, err
+	}
+
+	if err = s.sessionsRepo.Delete(ctx, session.UserID); err != nil {
+		return core.Tokens{}, err
+	}
+
+	if session.ExpiresAt.Unix() < time.Now().Unix() {
+		return core.Tokens{}, core.ErrRefreshTokenExpired
+	}
+
+	return s.createSession(ctx, session.UserID)
 }
 
 func (s *UsersService) GetByID(ctx context.Context, id uuid.UUID) (core.User, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *UsersService) createSession(userID string) (core.Tokens, error) {
+func (s *UsersService) createSession(ctx context.Context, userID uuid.UUID) (core.Tokens, error) {
 	var (
 		res core.Tokens
 		err error
 	)
 
-	res.AccessToken, err = s.tokenManager.NewJWT(userID, s.accessTokenTTL)
+	res.AccessToken, err = s.tokenManager.NewJWT(userID.String(), s.accessTokenTTL)
 	if err != nil {
 		return res, err
+	}
+
+	res.RefreshToken, err = s.tokenManager.NewRefreshToken()
+	if err != nil {
+		return res, err
+	}
+
+	if err = s.sessionsRepo.Create(ctx, core.RefreshSession{
+		UserID:    userID,
+		Token:     res.RefreshToken,
+		ExpiresAt: time.Now().Add(s.refreshTokenTTL),
+	}); err != nil {
+		return core.Tokens{}, err
 	}
 
 	return res, err
