@@ -22,6 +22,8 @@ SESSION_SECRET=JUHDSGYUiAUBUGIFHOJPJF*($#O@J(*FU*#!)(J#
 HTTP_HOST=localhost
 
 APP_ENV=local
+
+GRPC_AUDIT_URL=host_ip:9000
 ```
 
 Use `make run` to build&run project, `make lint` to check code with linter, `make migrate` to apply the migration scheme.

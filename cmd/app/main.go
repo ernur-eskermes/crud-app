@@ -6,6 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	grpcClient "github.com/ernur-eskermes/crud-app/internal/transport/grpc"
+
 	"github.com/ernur-eskermes/crud-app/internal/storage/psql"
 
 	"github.com/ernur-eskermes/crud-app/pkg/otp"
@@ -69,12 +71,17 @@ func main() {
 
 	// init deps
 
+	auditClient, err := grpcClient.NewClient(cfg.GRPC.AuditURL)
+	if err != nil {
+		logger.Fatal(err)
+	}
+
 	usersRepo := psql.NewUsersRepo(db)
 	sessionsRepo := psql.NewSessionsRepo(db)
-	usersService := service.NewUsersService(usersRepo, sessionsRepo, hasher, tokenManager, cfg.Auth.JWT.AccessTokenTTL, cfg.Auth.JWT.RefreshTokenTTL, cfg.HTTP.Host, memCache, otpGenerator)
+	usersService := service.NewUsersService(usersRepo, sessionsRepo, auditClient, hasher, tokenManager, cfg.Auth.JWT.AccessTokenTTL, cfg.Auth.JWT.RefreshTokenTTL, cfg.HTTP.Host, memCache, otpGenerator, logger)
 
 	booksRepo := psql.NewBooksRepo(db)
-	booksService := service.NewBooksService(booksRepo, tokenManager)
+	booksService := service.NewBooksService(booksRepo, auditClient, tokenManager, logger)
 
 	handlers := rest.NewHandler(usersService, booksService, tokenManager, logger)
 
@@ -86,7 +93,7 @@ func main() {
 		BodyLimit:    cfg.HTTP.MaxHeaderMegabytes << 20,
 	})
 
-	handlers.InitRouter(app, cfg)
+	handlers.InitRouter(app)
 
 	go func() {
 		if err = app.Listen(":" + cfg.HTTP.Port); err != nil {
@@ -106,6 +113,10 @@ func main() {
 
 	if err = app.Shutdown(); err != nil {
 		logger.Errorf("failed to stop server: %v", err)
+	}
+
+	if err = auditClient.CloseConnection(); err != nil {
+		logger.Errorf("failed to close grpc connection: %v", err)
 	}
 
 	db.Close()

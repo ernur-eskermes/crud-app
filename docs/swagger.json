@@ -212,7 +212,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/core.Book"
                         }
                     },
                     "400": {
