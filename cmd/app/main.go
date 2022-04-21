@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	grpcClient "github.com/ernur-eskermes/crud-app/internal/transport/grpc"
 
 	"github.com/ernur-eskermes/crud-app/internal/storage/psql"
 
@@ -69,9 +72,14 @@ func main() {
 
 	// init deps
 
+	auditClient, err := grpcClient.NewClient(cfg.GRPC.AuditURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	usersRepo := psql.NewUsersRepo(db)
 	sessionsRepo := psql.NewSessionsRepo(db)
-	usersService := service.NewUsersService(usersRepo, sessionsRepo, hasher, tokenManager, cfg.Auth.JWT.AccessTokenTTL, cfg.Auth.JWT.RefreshTokenTTL, cfg.HTTP.Host, memCache, otpGenerator)
+	usersService := service.NewUsersService(usersRepo, sessionsRepo, auditClient, hasher, tokenManager, cfg.Auth.JWT.AccessTokenTTL, cfg.Auth.JWT.RefreshTokenTTL, cfg.HTTP.Host, memCache, otpGenerator, logger)
 
 	booksRepo := psql.NewBooksRepo(db)
 	booksService := service.NewBooksService(booksRepo, tokenManager)

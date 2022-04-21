@@ -3,6 +3,7 @@ package psql
 import (
 	"context"
 	"errors"
+
 	"github.com/jackc/pgx/v4"
 
 	"github.com/ernur-eskermes/crud-app/internal/core"

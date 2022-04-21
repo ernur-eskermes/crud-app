@@ -28,10 +28,15 @@ type (
 		HTTP        HTTPConfig
 		Auth        AuthConfig
 		Limiter     LimiterConfig
+		GRPC        GRPCConfig
 	}
 
 	PostgresConfig struct {
 		ConnStr string
+	}
+
+	GRPCConfig struct {
+		AuditURL string
 	}
 
 	AuthConfig struct {
@@ -100,6 +105,8 @@ func setFromEnv(cfg *Config) {
 	cfg.Auth.SessionSecret = os.Getenv("SESSION_SECRET")
 
 	cfg.HTTP.Host = os.Getenv("HTTP_HOST")
+
+	cfg.GRPC.AuditURL = os.Getenv("GRPC_AUDIT_URL")
 
 	cfg.Environment = os.Getenv("APP_ENV")
 }
