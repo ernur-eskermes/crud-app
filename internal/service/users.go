@@ -139,6 +139,15 @@ func (s *UsersService) SignIn(ctx context.Context, input core.AuthInput) (core.T
 		return core.Tokens{}, err
 	}
 
+	if err = s.auditClient.SendLogRequest(ctx, audit.LogItem{
+		Action:    audit.ActionLogin,
+		Entity:    audit.EntityUser,
+		EntityID:  user.ID.String(),
+		Timestamp: time.Now(),
+	}); err != nil {
+		s.logger.Error("failed to send log request: ", err)
+	}
+
 	return s.createSession(ctx, user.ID)
 }
 
@@ -164,7 +173,21 @@ func (s *UsersService) RefreshTokens(ctx context.Context, refreshToken string) (
 }
 
 func (s *UsersService) GetByID(ctx context.Context, id uuid.UUID) (core.User, error) {
-	return s.repo.GetByID(ctx, id)
+	user, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return user, err
+	}
+
+	if err = s.auditClient.SendLogRequest(ctx, audit.LogItem{
+		Action:    audit.ActionGet,
+		Entity:    audit.EntityUser,
+		EntityID:  user.ID.String(),
+		Timestamp: time.Now(),
+	}); err != nil {
+		s.logger.Error("failed to send log request: ", err)
+	}
+
+	return user, err
 }
 
 func (s *UsersService) createSession(ctx context.Context, userID uuid.UUID) (core.Tokens, error) {

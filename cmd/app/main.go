@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -74,7 +73,7 @@ func main() {
 
 	auditClient, err := grpcClient.NewClient(cfg.GRPC.AuditURL)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	usersRepo := psql.NewUsersRepo(db)
@@ -82,7 +81,7 @@ func main() {
 	usersService := service.NewUsersService(usersRepo, sessionsRepo, auditClient, hasher, tokenManager, cfg.Auth.JWT.AccessTokenTTL, cfg.Auth.JWT.RefreshTokenTTL, cfg.HTTP.Host, memCache, otpGenerator, logger)
 
 	booksRepo := psql.NewBooksRepo(db)
-	booksService := service.NewBooksService(booksRepo, tokenManager)
+	booksService := service.NewBooksService(booksRepo, auditClient, tokenManager, logger)
 
 	handlers := rest.NewHandler(usersService, booksService, tokenManager, logger)
 
@@ -94,7 +93,7 @@ func main() {
 		BodyLimit:    cfg.HTTP.MaxHeaderMegabytes << 20,
 	})
 
-	handlers.InitRouter(app, cfg)
+	handlers.InitRouter(app)
 
 	go func() {
 		if err = app.Listen(":" + cfg.HTTP.Port); err != nil {
@@ -114,6 +113,10 @@ func main() {
 
 	if err = app.Shutdown(); err != nil {
 		logger.Errorf("failed to stop server: %v", err)
+	}
+
+	if err = auditClient.CloseConnection(); err != nil {
+		logger.Errorf("failed to close grpc connection: %v", err)
 	}
 
 	db.Close()
