@@ -63,7 +63,7 @@ func (h *Handler) getBookByID(c *fiber.Ctx) error {
 // @Accept  json
 // @Produce  json
 // @Param input body core.CreateBookInput true "create book"
-// @Success 201 {string} string "Created"
+// @Success 201 {object} core.Book
 // @Failure 400 {object} core.ErrorResponse
 // @Router /books [post]
 func (h *Handler) createBook(c *fiber.Ctx) error {
@@ -83,13 +83,14 @@ func (h *Handler) createBook(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(validationError)
 	}
 
-	if err = h.booksService.Create(context.TODO(), inp, userID); err != nil {
+	book, err := h.booksService.Create(context.TODO(), inp, userID)
+	if err != nil {
 		h.logger.Error(err)
 
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	return c.SendStatus(fiber.StatusCreated)
+	return c.Status(fiber.StatusCreated).JSON(book)
 }
 
 // @Summary Delete Book

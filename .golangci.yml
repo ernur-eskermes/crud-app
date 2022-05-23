@@ -72,6 +72,12 @@ issues:
         - funlen
         - goerr113
         - noctx
+    - path: (internal/transport/grpc|internal/transport/rabbitmq)
+      linters:
+        - stylecheck
+    - path: (internal/service)
+      linters:
+        - forbidigo
     - path: (internal/transport/rest)
       linters:
         - godot

@@ -15,25 +15,15 @@ services:
       - .env
     depends_on:
       - ninja-db
-    networks:
-      - backend
     restart: on-failure
   ninja-db:
     container_name: ninja_db
     image: postgres:13-alpine
     volumes:
       - pg_data:/var/lib/postgresql/data/
-    ports:
-      - "5432:5432"
     environment:
       - POSTGRES_PASSWORD=qwerty123
-    networks:
-      - backend
     restart: on-failure
-networks:
-  backend:
-    name: backend
-    external: true
 volumes:
   pg_data:
 

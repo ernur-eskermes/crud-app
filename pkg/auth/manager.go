@@ -54,7 +54,12 @@ func (m *Manager) Parse(accessToken string) (string, error) {
 		return "", fmt.Errorf("error get user claims from token")
 	}
 
-	return claims["sub"].(string), nil
+	v, ok := claims["sub"].(string)
+	if !ok {
+		return "", errors.New("invalid sub type")
+	}
+
+	return v, nil
 }
 
 func (m *Manager) NewRefreshToken() (string, error) {

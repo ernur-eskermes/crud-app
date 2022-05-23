@@ -6,8 +6,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ernur-eskermes/crud-app/pkg/logging"
+
 	"github.com/ernur-eskermes/crud-app/pkg/otp"
 	cache "github.com/ernur-eskermes/go-homeworks/2-cache-ttl"
+
+	audit "github.com/ernur-eskermes/crud-audit-log/pkg/domain"
 
 	"github.com/google/uuid"
 
@@ -29,9 +33,16 @@ type SessionsRepository interface {
 	Delete(ctx context.Context, userID uuid.UUID) error
 }
 
+type AuditClient interface {
+	SendLogRequest(ctx context.Context, req audit.LogItem) error
+}
+
 type UsersService struct {
 	repo         UsersRepository
 	sessionsRepo SessionsRepository
+
+	auditClient AuditClient
+
 	hasher       hash.PasswordHasher
 	tokenManager auth.TokenManager
 	cache        cache.Cache
@@ -40,20 +51,25 @@ type UsersService struct {
 	accessTokenTTL  time.Duration
 	refreshTokenTTL time.Duration
 
+	logger *logging.Logger
+
 	domain string
 }
 
-func NewUsersService(repo UsersRepository, sessionsRepo SessionsRepository, hasher hash.PasswordHasher, tokenManager auth.TokenManager,
-	accessTTL, refreshTTL time.Duration, domain string, cache cache.Cache, otpGenerator otp.Generator) *UsersService {
+func NewUsersService(repo UsersRepository, sessionsRepo SessionsRepository, auditClient AuditClient, hasher hash.PasswordHasher, tokenManager auth.TokenManager,
+	accessTTL, refreshTTL time.Duration, domain string, cache cache.Cache, otpGenerator otp.Generator, logger *logging.Logger,
+) *UsersService {
 	return &UsersService{
 		repo:            repo,
 		sessionsRepo:    sessionsRepo,
+		auditClient:     auditClient,
 		hasher:          hasher,
 		tokenManager:    tokenManager,
 		accessTokenTTL:  accessTTL,
 		refreshTokenTTL: refreshTTL,
 		domain:          domain,
 		cache:           cache,
+		logger:          logger,
 		otpGenerator:    otpGenerator,
 	}
 }
@@ -68,10 +84,24 @@ func (s *UsersService) SignUp(ctx context.Context, input core.AuthInput) error {
 	s.cache.Set(input.Username, code, 10*time.Minute)
 	fmt.Println(code)
 
-	return s.repo.Create(ctx, &core.User{
+	user := core.User{
 		Username: input.Username,
 		Password: passwordHash,
-	})
+	}
+	if err = s.repo.Create(ctx, &user); err != nil {
+		return err
+	}
+
+	if err = s.auditClient.SendLogRequest(ctx, audit.LogItem{
+		Action:    audit.ActionRegister,
+		Entity:    audit.EntityUser,
+		EntityID:  user.ID.String(),
+		Timestamp: time.Now(),
+	}); err != nil {
+		s.logger.Error("failed to send log request: ", err)
+	}
+
+	return nil
 }
 
 func (s *UsersService) Verify(ctx context.Context, username, code string) error {
@@ -109,6 +139,15 @@ func (s *UsersService) SignIn(ctx context.Context, input core.AuthInput) (core.T
 		return core.Tokens{}, err
 	}
 
+	if err = s.auditClient.SendLogRequest(ctx, audit.LogItem{
+		Action:    audit.ActionLogin,
+		Entity:    audit.EntityUser,
+		EntityID:  user.ID.String(),
+		Timestamp: time.Now(),
+	}); err != nil {
+		s.logger.Error("failed to send log request: ", err)
+	}
+
 	return s.createSession(ctx, user.ID)
 }
 
@@ -134,7 +173,21 @@ func (s *UsersService) RefreshTokens(ctx context.Context, refreshToken string) (
 }
 
 func (s *UsersService) GetByID(ctx context.Context, id uuid.UUID) (core.User, error) {
-	return s.repo.GetByID(ctx, id)
+	user, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return user, err
+	}
+
+	if err = s.auditClient.SendLogRequest(ctx, audit.LogItem{
+		Action:    audit.ActionGet,
+		Entity:    audit.EntityUser,
+		EntityID:  user.ID.String(),
+		Timestamp: time.Now(),
+	}); err != nil {
+		s.logger.Error("failed to send log request: ", err)
+	}
+
+	return user, err
 }
 
 func (s *UsersService) createSession(ctx context.Context, userID uuid.UUID) (core.Tokens, error) {

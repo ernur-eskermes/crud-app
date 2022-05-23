@@ -7,7 +7,6 @@ import (
 	"github.com/ernur-eskermes/crud-app/internal/core"
 	"github.com/google/uuid"
 
-	"github.com/ernur-eskermes/crud-app/internal/config"
 	"github.com/ernur-eskermes/crud-app/pkg/auth"
 	"github.com/ernur-eskermes/crud-app/pkg/logging"
 	"github.com/gofiber/fiber/v2"
@@ -28,7 +27,7 @@ type UsersService interface {
 }
 
 type BooksService interface {
-	Create(ctx context.Context, book core.CreateBookInput, userID uuid.UUID) error
+	Create(ctx context.Context, book core.CreateBookInput, userID uuid.UUID) (core.Book, error)
 	GetByID(ctx context.Context, id uuid.UUID) (core.Book, error)
 	GetAll(ctx context.Context) ([]core.Book, error)
 	Delete(ctx context.Context, id, userID uuid.UUID) error
@@ -51,7 +50,7 @@ func NewHandler(usersService UsersService, booksService BooksService, tokenManag
 	}
 }
 
-func (h *Handler) InitRouter(app *fiber.App, cfg *config.Config) {
+func (h *Handler) InitRouter(app *fiber.App) {
 	app.Use(cors.New())
 	app.Use(logger.New(logger.Config{
 		TimeFormat: time.RFC3339,

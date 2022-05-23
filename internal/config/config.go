@@ -28,10 +28,20 @@ type (
 		HTTP        HTTPConfig
 		Auth        AuthConfig
 		Limiter     LimiterConfig
+		GRPC        GRPCConfig
+		AMQP        AMQPConfig
 	}
 
 	PostgresConfig struct {
 		ConnStr string
+	}
+
+	GRPCConfig struct {
+		AuditURL string
+	}
+
+	AMQPConfig struct {
+		URI string
 	}
 
 	AuthConfig struct {
@@ -100,6 +110,10 @@ func setFromEnv(cfg *Config) {
 	cfg.Auth.SessionSecret = os.Getenv("SESSION_SECRET")
 
 	cfg.HTTP.Host = os.Getenv("HTTP_HOST")
+
+	cfg.GRPC.AuditURL = os.Getenv("GRPC_AUDIT_URL")
+
+	cfg.AMQP.URI = os.Getenv("AMQP_URI")
 
 	cfg.Environment = os.Getenv("APP_ENV")
 }
