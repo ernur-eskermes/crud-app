@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/arsmn/fiber-swagger/v2 v2.31.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/ernur-eskermes/crud-audit-log v0.0.0-20220420052215-bcdafc51365e
+	github.com/ernur-eskermes/crud-audit-log v0.0.0-20220421052222-fd1aaf224d19
 	github.com/ernur-eskermes/go-homeworks/2-cache-ttl v0.0.0-20220419145724-0a08d509d9ca
 	github.com/go-playground/validator/v10 v10.10.1
 	github.com/gofiber/fiber/v2 v2.32.0
@@ -15,10 +15,11 @@ require (
 	github.com/lib/pq v1.10.5
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/viper v1.11.0
+	github.com/streadway/amqp v1.0.0
 	github.com/stretchr/testify v1.7.1
 	github.com/swaggo/swag v1.8.1
 	github.com/xlzd/gotp v0.0.0-20220110052318-fab697c03c2c
-	google.golang.org/grpc v1.45.0
+	google.golang.org/grpc v1.46.2
 	google.golang.org/protobuf v1.28.0
 )
 
@@ -64,11 +65,11 @@ require (
 	github.com/valyala/fasthttp v1.35.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4 // indirect
-	golang.org/x/net v0.0.0-20220418201149-a630d4f3e7a2 // indirect
-	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
+	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2 // indirect
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.7 // indirect
-	google.golang.org/genproto v0.0.0-20220414192740-2d67ff6cf2b4 // indirect
+	google.golang.org/genproto v0.0.0-20220519153652-3a47de7e79bd // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect

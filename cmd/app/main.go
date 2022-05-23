@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	grpcClient "github.com/ernur-eskermes/crud-app/internal/transport/grpc"
+	rabbitmqClient "github.com/ernur-eskermes/crud-app/internal/transport/rabbitmq"
 
 	"github.com/ernur-eskermes/crud-app/internal/storage/psql"
 
@@ -71,7 +71,9 @@ func main() {
 
 	// init deps
 
-	auditClient, err := grpcClient.NewClient(cfg.GRPC.AuditURL)
+	// auditClient, err := grpcClient.NewClient(cfg.GRPC.AuditURL)
+
+	auditClient, err := rabbitmqClient.NewClient(cfg.AMQP.URI)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -116,7 +118,7 @@ func main() {
 	}
 
 	if err = auditClient.CloseConnection(); err != nil {
-		logger.Errorf("failed to close grpc connection: %v", err)
+		logger.Errorf("failed to close audit client connection: %v", err)
 	}
 
 	db.Close()

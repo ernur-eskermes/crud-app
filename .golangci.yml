@@ -72,7 +72,7 @@ issues:
         - funlen
         - goerr113
         - noctx
-    - path: (internal/transport/grpc)
+    - path: (internal/transport/grpc|internal/transport/rabbitmq)
       linters:
         - stylecheck
     - path: (internal/service)

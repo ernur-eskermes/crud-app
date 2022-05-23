@@ -32,7 +32,7 @@ func (i *AuthInput) Validate() []*ErrorResponse {
 
 type VerifyInput struct {
 	Username string `json:"username" validate:"required"`
-	Code     string `json:"code" validate:"required,eq=6"`
+	Code     string `json:"code" validate:"required"`
 }
 
 func (i *VerifyInput) Validate() []*ErrorResponse {
